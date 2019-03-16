@@ -1,11 +1,13 @@
 CFLAGS += -O3 -march=native -Wall -pedantic
 
-all: test imgscale
-test: test.c oil_resample.c
-	$(CC) $(CFLAGS) test.c -o $@ -lm
-imgscale: oil_resample.o oil_libjpeg.o oil_libpng.o imgscale.c
-	$(CC) $(CFLAGS) oil_resample.o oil_libjpeg.o oil_libpng.o imgscale.c -o $@ $(LDFLAGS) -ljpeg -lpng -lm
-oilview: oil_resample.o oil_libjpeg.o oil_libpng.o oilview.c
-	$(CC) $(CFLAGS) `pkg-config --cflags gtk+-3.0` oil_resample.o oil_libjpeg.o oil_libpng.o oilview.c -o $@ $(LDFLAGS) `pkg-config --libs gtk+-3.0` -ljpeg -lpng -lm -lX11
+all:  liboilresample.so.0 oiltest oilscale
+liboilresample.so.0: src/oil_resample.c src/oil_libjpeg.c src/oil_libpng.c
+	$(CC) -shared -Wl,-soname,$@ $(CFLAGS) $^ -o $@ $(LDFLAGS) -ljpeg -lpng -lm
+oiltest: src/test.c src/oil_resample.c
+	$(CC) $(CFLAGS) src/test.c -o $@ -lm
+oilscale: liboilresample.so.0  src/imgscale.c
+	$(CC) $(CFLAGS) $^ -o $@
+oilview: liboilresample.so.0 src/oilview.c
+	$(CC) $(CFLAGS) `pkg-config --cflags gtk+-3.0` $^ -o $@ $(LDFLAGS) `pkg-config --libs gtk+-3.0` -ljpeg -lpng -lm -lX11
 clean:
-	rm -rf test test.dSYM oil_resample.o imgscale oilview
+	rm -rf oiltest oiltest.dSYM liboilresample.so.0 oilscale oilview

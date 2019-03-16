@@ -21,10 +21,9 @@ Features
 --------
   * Antialiasing - the interpolator is scaled when shrinking images.
   * Color space aware - liboil converts images to linear RGB for processing.
-  * Pre-multiplied alpha - avoids artifacts when resizing with transparency.
 
-jpgscale & pngscale
--------------------
+oilscale (jpg & png)
+--------------------
 
 The liboil repository includes command-line tools for resizing JPEG and PNG
 images. These resizers read the original image from stdin and write the
@@ -32,7 +31,8 @@ resized image to stdout.
 
 For example, to resize in.jpg to fit in a 400x800 box while preserving the
 aspect ratio:
-  jpgscale 400 800 < in.jpg > out.jpg
+
+    $ LD_LIBRARY_PATH=. ./oilscale 400 800 in.jpg out.jpg
 
 Example usage as a C library
 ----------------------------
@@ -77,8 +77,22 @@ reference implementation. You can build it with:
 
 And run it with:
 
-    $ ./test
+    $ ./oiltest
 
 It is recommended to run it with valgrind as well:
 
-    $ valgrind ./test
+    $ valgrind ./oiltest
+
+Example
+-------
+
+![Example image](images/lena.jpg)
+
+    $ LD_LIBRARY_PATH=. ./oilscale 2048 2048 lena.png lena.x4.png
+    $ LD_LIBRARY_PATH=. ./oilscale 2048 2048 lena.jpg lena.x4.jpg
+
+![Example scale image](images/lena.x4.jpg)
+
+ABOUT
+=====
+https://github.com/ender672/liboil
