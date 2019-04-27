@@ -21,12 +21,13 @@ Features
 --------
   * Antialiasing - the interpolator is scaled when shrinking images.
   * Color space aware - liboil converts images to linear RGB for processing.
+  * Pre-multiplied alpha - avoids artifacts when resizing with transparency.
 
 oilscale (jpg & png)
 --------------------
 
-The liboil repository includes command-line tools for resizing JPEG and PNG
-images. These resizers read the original image from stdin and write the
+The liboil repository include a command-line tool for resizing JPEG and PNG
+images. This resizer reads the original image from stdin and writes the
 resized image to stdout.
 
 For example, to resize in.jpg to fit in a 400x800 box while preserving the

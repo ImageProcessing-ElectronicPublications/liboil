@@ -39,13 +39,13 @@ enum oil_colorspace {
 	OIL_CS_RGB     = 0x0003,
 
 	// sRGB w/ padding - same as OIL_CS_RGB, but padded with an extra byte
-	OIL_CS_RGBX    = 0x0004, // sRGB w/ padding
+	OIL_CS_RGBX    = 0x0004,
 
 	// sRGB w/ alpha - sRGB to linear conversion and premultiplied alpha
-	OIL_CS_RGBA    = 0x0104, // sRGB w/ alpha
+	OIL_CS_RGBA    = 0x0104,
 
 	// CMYK - no color space conversions
-	OIL_CS_CMYK    = 0x0204, // four color CMYK
+	OIL_CS_CMYK    = 0x0204,
 };
 
 /**
@@ -54,7 +54,8 @@ enum oil_colorspace {
 #define OIL_CMP(x) ((x)&0xFF)
 
 /**
- * Struct to hold state for scaling.
+ * Struct to hold state for scaling. Changing these will produce unpredictable
+ * results.
  */
 struct oil_scale {
 	int in_height; // input image height.
@@ -64,15 +65,15 @@ struct oil_scale {
 	enum oil_colorspace cs; // color space of input & output.
 	int in_pos; // current row of input image.
 	int out_pos; // current row of output image.
-	int taps; // number of taps required to perform scaling.
-	int target; // where the ring buffer should be on next scaling.
-	int sl_len; // length in bytes of a row.
-	float ty; // sub-pixel offset for next scaling.
+
 	float *coeffs_y; // buffer for holding temporary y-coefficients.
 	float *coeffs_x; // buffer for holding precalculated coefficients.
-	int *borders; // holds precalculated coefficient rotation points.
+	int *borders_x; // holds precalculated coefficient rotation points.
+	int *borders_y; // coefficient rotation points for y-scaling.
+	float *sums_y; // buffer of intermediate sums for y-scaling.
 	float *rb; // ring buffer holding scanlines.
-	float **virt; // space to provide scanline pointers for scaling.
+	int rows_in_rb; // number of rows currently in the ring buffer.
+	float *tmp_coeffs; // temporary buffer for calculating coeffs.
 };
 
 /**
@@ -106,13 +107,14 @@ int oil_scale_init(struct oil_scale *os, int in_height, int out_height,
 void oil_scale_free(struct oil_scale *os);
 
 /**
- * Get a pointer to the next scanline to be filled in the ring buffer.
- * @ys: Pointer to the yscaler struct to advance.
+ * Return the number of input scanlines needed before the next output scanline
+ * can be produced.
+ * @os: Pointer to the oil scaler struct.
  *
  * Returns 0 if no more input lines are needed to produce the next output line.
  * Otherwise, returns the number of input lines that are needed.
  */
-int oil_scale_slots(struct oil_scale *ys);
+int oil_scale_slots(struct oil_scale *os);
 
 /**
  * Ingest & buffer an input scanline. Input is unsigned chars.
