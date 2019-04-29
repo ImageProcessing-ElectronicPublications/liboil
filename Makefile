@@ -1,4 +1,4 @@
-CFLAGS += -O3 -march=native -Wall -pedantic
+CFLAGS += -O3 -Wall -pedantic
 
 all:  liboilresample.so.0 oiltest oilscale
 liboilresample.so.0: src/oil_resample.c src/oil_libjpeg.c src/oil_libpng.c
