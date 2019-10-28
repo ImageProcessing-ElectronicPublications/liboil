@@ -529,6 +529,17 @@ static void build_s2l(void)
 	}
 }
 
+static float i2f_map[256];
+
+static void build_i2f(void)
+{
+	int i;
+
+	for (i=0; i<=255; i++) {
+		i2f_map[i] = i / 255.0f;
+	}
+}
+
 /**
  * Given input & output dimensions, populate a buffer of coefficients and
  * border counters.
@@ -662,7 +673,6 @@ static void xscale_down_rgbx(unsigned char *in, float *out,
 			coeff_buf += 4;
 		}
 		dump_out(out, sum, 3);
-		out[3] = 0;
 		out += 4;
 	}
 }
@@ -674,7 +684,7 @@ static void xscale_down_rgb(unsigned char *in, float *out,
 	float sum[3][4] = {{ 0.0f }};
 
 	for (i=0; i<out_width; i++) {
-		for (j=border_buf[i]; j>0; j--) {
+		for (j=0; j<border_buf[i]; j++) {
 			for (k=0; k<3; k++) {
 				add_sample_to_sum_f(s2l_map[in[k]], coeff_buf, sum[k]);
 			}
@@ -694,7 +704,7 @@ static void xscale_down_g(unsigned char *in, float *out,
 
 	for (i=0; i<out_width; i++) {
 		for (j=0; j<border_buf[i]; j++) {
-			add_sample_to_sum_f(in[0] / 255.0f, coeff_buf, sum);
+			add_sample_to_sum_f(i2f_map[in[0]], coeff_buf, sum);
 			in += 1;
 			coeff_buf += 4;
 		}
@@ -713,7 +723,7 @@ static void xscale_down_cmyk(unsigned char *in, float *out,
 	for (i=0; i<out_width; i++) {
 		for (j=0; j<border_buf[i]; j++) {
 			for (k=0; k<4; k++) {
-				add_sample_to_sum_f(in[k] / 255.0f, coeff_buf, sum[k]);
+				add_sample_to_sum_f(i2f_map[in[k]], coeff_buf, sum[k]);
 			}
 			in += 4;
 			coeff_buf += 4;
@@ -731,7 +741,7 @@ static void xscale_down_rgba(unsigned char *in, float *out,
 
 	for (i=0; i<out_width; i++) {
 		for (j=0; j<border_buf[i]; j++) {
-			alpha = in[3] / 255.0f;
+			alpha = i2f_map[in[3]];
 			for (k=0; k<3; k++) {
 				add_sample_to_sum_f(s2l_map[in[k]] * alpha, coeff_buf, sum[k]);
 			}
@@ -752,8 +762,8 @@ static void xscale_down_ga(unsigned char *in, float *out,
 
 	for (i=0; i<out_width; i++) {
 		for (j=0; j<border_buf[i]; j++) {
-			alpha = in[1] / 255.0f;
-			add_sample_to_sum_f(in[0] / 255.0f * alpha, coeff_buf, sum[0]);
+			alpha = i2f_map[in[1]];
+			add_sample_to_sum_f(i2f_map[in[0]] * alpha, coeff_buf, sum[0]);
 			add_sample_to_sum_f(alpha, coeff_buf, sum[1]);
 			in += 2;
 			coeff_buf += 4;
@@ -794,13 +804,13 @@ static void oil_xscale_down(unsigned char *in, float *out,
 static void xscale_up_reduce_n(float in[][4], float *out, float *coeffs,
 	int cmp)
 {
-	int i, j;
+	int i;
 
 	for (i=0; i<cmp; i++) {
-		out[i] = 0;
-		for (j=0; j<4; j++) {
-			out[i] += in[i][j] * coeffs[j];
-		}
+		out[i] = in[i][0] * coeffs[0] +
+			in[i][1] * coeffs[1] +
+			in[i][2] * coeffs[2] +
+			in[i][3] * coeffs[3];
 	}
 }
 
@@ -814,7 +824,7 @@ static void xscale_up_rgbx(unsigned char *in, int width_in, float *out,
 		for (j=0; j<3; j++) {
 			push_f(smp[j], s2l_map[in[j]]);
 		}
-		for (j=border_buf[i]; j>0; j--) {
+		for (j=0; j<border_buf[i]; j++) {
 			xscale_up_reduce_n(smp, out, coeff_buf, 3);
 			out[3] = 0;
 			out += 4;
@@ -890,7 +900,7 @@ static void xscale_up_ga(unsigned char *in, int width_in, float *out,
 
 	for (i=0; i<width_in; i++) {
 		push_f(smp[1], in[1] / 255.0f);
-		push_f(smp[0], smp[1][3] * in[0] / 255.0f);
+		push_f(smp[0], smp[1][3] * i2f_map[in[0]]);
 		for (j=0; j<border_buf[i]; j++) {
 			xscale_up_reduce_n(smp, out, coeff_buf, 2);
 			out += 2;
@@ -903,20 +913,19 @@ static void xscale_up_ga(unsigned char *in, int width_in, float *out,
 static void xscale_up_g(unsigned char *in, int width_in, float *out,
 	float *coeff_buf, int *border_buf)
 {
-	int i, j, k;
+	int i, j;
 	float smp[4] = {0};
 
 	for (i=0; i<width_in; i++) {
-		push_f(smp, in[0] / 255.0f);
+		push_f(smp, in[i] / 255.0f);
 		for (j=0; j<border_buf[i]; j++) {
-			out[0] = 0;
-			for (k=0; k<4; k++) {
-				out[0] += smp[k] * coeff_buf[k];
-			}
+			out[0] = smp[0] * coeff_buf[0] +
+				smp[1] * coeff_buf[1] +
+				smp[2] * coeff_buf[2] +
+				smp[3] * coeff_buf[3];
 			out += 1;
 			coeff_buf += 4;
 		}
-		in += 1;
 	}
 }
 
@@ -952,6 +961,7 @@ void oil_global_init()
 {
 	build_s2l();
 	build_l2s();
+	build_i2f();
 }
 
 static int calc_coeffs_len(int in_dim, int out_dim)
@@ -976,7 +986,6 @@ static void set_coeffs(int in_dim, int out_dim, float *coeffs, int *borders,
 		scale_up_coeffs(in_dim, out_dim, coeffs, borders);
 	}
 }
-
 
 int oil_scale_init(struct oil_scale *os, int in_height, int out_height,
 	int in_width, int out_width, enum oil_colorspace cs)
@@ -1036,6 +1045,11 @@ int oil_scale_init(struct oil_scale *os, int in_height, int out_height,
 	set_coeffs(in_height, out_height, os->coeffs_y, os->borders_y, os->tmp_coeffs);
 
 	return 0;
+}
+
+void oil_scale_restart(struct oil_scale *os)
+{
+	os->in_pos = os->out_pos = os->rows_in_rb = 0;
 }
 
 void oil_scale_free(struct oil_scale *os)

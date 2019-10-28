@@ -29,7 +29,7 @@ enum oil_colorspace {
 	// error
 	OIL_CS_UNKNOWN = 0,
 
-	// greyscale - no color space conversions
+	// greyscale - no sRGB gamma space conversions
 	OIL_CS_G       = 0x0001,
 
 	// greyscale w/ alpha - uses premultiplied alpha
@@ -44,7 +44,7 @@ enum oil_colorspace {
 	// sRGB w/ alpha - sRGB to linear conversion and premultiplied alpha
 	OIL_CS_RGBA    = 0x0104,
 
-	// CMYK - no color space conversions
+	// no color space conversions
 	OIL_CS_CMYK    = 0x0204,
 };
 
@@ -85,6 +85,13 @@ struct oil_scale {
 void oil_global_init(void);
 
 /**
+ * Reset an already-initialized oil_scale struct. This allows you to re-use an
+ * oil_scale struct when the input & output dimensions as well as the colorspace
+ * will be the same.
+ */
+void oil_scale_reset(struct oil_scale *os);
+
+/**
  * Initialize an oil scaler struct.
  * @os: Pointer to the scaler struct to be initialized.
  * @in_height: Height, in pixels, of the input image.
@@ -101,8 +108,14 @@ int oil_scale_init(struct oil_scale *os, int in_height, int out_height,
 	int in_width, int out_width, enum oil_colorspace cs);
 
 /**
+ * Reset rows countersin an oil scaler struct.
+ * @os: Pointer to the scaler struct to be reseted.
+ */
+void oil_scale_restart(struct oil_scale *);
+
+/**
  * Free heap allocations associated with a yscaler struct.
- * @ys: Pointer to the yscaler struct to be freed.
+ * @os: Pointer to the yscaler struct to be freed.
  */
 void oil_scale_free(struct oil_scale *os);
 
@@ -126,10 +139,10 @@ void oil_scale_in(struct oil_scale *os, unsigned char *in);
 /**
  * Scale previously ingested & buffered contents to produce the next scaled output
  * scanline.
- * @ys: Pointer to the scaler struct.
+ * @os: Pointer to the scaler struct.
  * @out: Pointer to the buffer where the output scanline will be written.
  */
-void oil_scale_out(struct oil_scale *ys, unsigned char *out);
+void oil_scale_out(struct oil_scale *os, unsigned char *out);
 
 /**
  * Calculate an output ratio that preserves the input aspect ratio.
